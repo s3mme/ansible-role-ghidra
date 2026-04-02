@@ -1,0 +1,52 @@
+---
+- name: Install Ghidra on Windows
+  block:
+    - name: Install Temurin JDK 21 via Chocolatey
+      chocolatey.chocolatey.win_chocolatey:
+        name: temurin21
+        state: present
+      when: ghidra_install_java | bool
+
+    - name: Set Ghidra archive facts
+      ansible.builtin.set_fact:
+        ghidra_archive_name: "ghidra_{{ ghidra_version }}_PUBLIC_{{ ghidra_release_date }}.zip"
+        ghidra_versioned_dir: "ghidra_{{ ghidra_version }}_PUBLIC"
+
+    - name: Check if Ghidra is already installed
+      ansible.windows.win_stat:
+        path: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}\\ghidraRun.bat"
+      register: ghidra_win_installed
+
+    - name: Download Ghidra archive
+      ansible.windows.win_get_url:
+        url: "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_{{ ghidra_version }}_build/{{ ghidra_archive_name }}"
+        dest: "C:\\Windows\\Temp\\{{ ghidra_archive_name }}"
+        checksum: "{{ ghidra_checksum | regex_replace('^sha256:', '') }}"
+        checksum_algorithm: sha256
+      when: not ghidra_win_installed.stat.exists
+
+    - name: Ensure Ghidra install directory exists
+      ansible.windows.win_file:
+        path: "{{ ghidra_windows_install_dir }}"
+        state: directory
+      when: not ghidra_win_installed.stat.exists
+
+    - name: Extract Ghidra archive
+      community.windows.win_unzip:
+        src: "C:\\Windows\\Temp\\{{ ghidra_archive_name }}"
+        dest: "{{ ghidra_windows_install_dir }}"
+      when: not ghidra_win_installed.stat.exists
+
+    - name: Set GHIDRA_INSTALL_DIR environment variable
+      ansible.windows.win_environment:
+        name: GHIDRA_INSTALL_DIR
+        value: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}"
+        state: present
+        level: machine
+
+    - name: Add Ghidra to system PATH
+      ansible.windows.win_path:
+        elements:
+          - "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}"
+        state: present
+        scope: machine

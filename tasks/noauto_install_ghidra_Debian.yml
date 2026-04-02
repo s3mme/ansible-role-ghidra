@@ -1,0 +1,64 @@
+---
+- name: Install Ghidra on Debian
+  block:
+    - name: Install OpenJDK 21
+      ansible.builtin.apt:
+        name: openjdk-21-jdk
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      become: true
+      when: ghidra_install_java | bool
+
+    - name: Set Ghidra archive facts
+      ansible.builtin.set_fact:
+        ghidra_archive_name: "ghidra_{{ ghidra_version }}_PUBLIC_{{ ghidra_release_date }}.zip"
+        ghidra_versioned_dir: "ghidra_{{ ghidra_version }}_PUBLIC"
+
+    - name: Download Ghidra archive
+      ansible.builtin.get_url:
+        url: "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_{{ ghidra_version }}_build/{{ ghidra_archive_name }}"
+        dest: "/tmp/{{ ghidra_archive_name }}"
+        checksum: "{{ ghidra_checksum }}"
+        mode: "0644"
+
+    - name: Extract Ghidra archive
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ ghidra_archive_name }}"
+        dest: "{{ ghidra_install_dir }}"
+        remote_src: true
+        creates: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/ghidraRun"
+      become: true
+
+    - name: Create Ghidra symlink
+      ansible.builtin.file:
+        src: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}"
+        dest: "{{ ghidra_install_dir }}/ghidra"
+        state: link
+      become: true
+      when: ghidra_create_symlink | bool
+
+    - name: Create Ghidra wrapper script
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          exec {{ ghidra_install_dir }}/ghidra/ghidraRun "$@"
+        dest: /usr/local/bin/ghidra
+        mode: "0755"
+      become: true
+
+    - name: Create Ghidra desktop entry
+      ansible.builtin.copy:
+        content: |
+          [Desktop Entry]
+          Name=Ghidra
+          Comment=Software Reverse Engineering Framework
+          Exec={{ ghidra_install_dir }}/ghidra/ghidraRun
+          Icon={{ ghidra_install_dir }}/ghidra/support/ghidra.ico
+          Terminal=false
+          Type=Application
+          Categories=Development;
+        dest: /usr/local/share/applications/ghidra.desktop
+        mode: "0644"
+      become: true
+      when: ghidra_create_desktop_file | bool

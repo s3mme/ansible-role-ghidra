@@ -1,0 +1,56 @@
+---
+- name: Configure Ghidra on Debian
+  block:
+    - name: Set Ghidra versioned dir fact
+      ansible.builtin.set_fact:
+        ghidra_versioned_dir: "ghidra_{{ ghidra_version }}_PUBLIC"
+
+    - name: Configure JAVA_HOME override in launch.properties
+      ansible.builtin.lineinfile:
+        path: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/support/launch.properties"
+        regexp: '^#?JAVA_HOME_OVERRIDE='
+        line: "JAVA_HOME_OVERRIDE={{ ghidra_java_home_override }}"
+      become: true
+      when: ghidra_java_home_override | length > 0
+
+    - name: Configure max memory in launch.properties
+      ansible.builtin.lineinfile:
+        path: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/support/launch.properties"
+        regexp: '^#?MAXMEM='
+        line: "MAXMEM={{ ghidra_max_memory }}"
+      become: true
+      when: ghidra_max_memory | length > 0
+
+    - name: Download Ghidra extensions from URL
+      ansible.builtin.get_url:
+        url: "{{ extension.url }}"
+        dest: "/tmp/ghidra_ext_{{ extension.name }}.zip"
+        checksum: "{{ extension.checksum | default(omit) }}"
+        mode: "0644"
+      loop: "{{ ghidra_extensions | selectattr('url', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      when: ghidra_extensions | length > 0
+
+    - name: Install Ghidra extensions from URL
+      ansible.builtin.unarchive:
+        src: "/tmp/ghidra_ext_{{ extension.name }}.zip"
+        dest: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/Extensions/Ghidra/"
+        remote_src: true
+        creates: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/Extensions/Ghidra/{{ extension.name }}"
+      loop: "{{ ghidra_extensions | selectattr('url', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      become: true
+      when: ghidra_extensions | length > 0
+
+    - name: Install Ghidra extensions from local path
+      ansible.builtin.unarchive:
+        src: "{{ extension.src }}"
+        dest: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/Extensions/Ghidra/"
+        creates: "{{ ghidra_install_dir }}/{{ ghidra_versioned_dir }}/Extensions/Ghidra/{{ extension.name }}"
+      loop: "{{ ghidra_extensions | selectattr('src', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      become: true
+      when: ghidra_extensions | length > 0

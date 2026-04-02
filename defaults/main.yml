@@ -1,0 +1,19 @@
+---
+ghidra_version: "12.0.4"
+ghidra_release_date: "20260303"
+ghidra_checksum: "sha256:c3b458661d69e26e203d739c0c82d143cc8a4a29d9e571f099c2cf4bda62a120"
+ghidra_install_dir: "/opt"
+ghidra_windows_install_dir: "C:\\Tools"
+ghidra_install_java: true
+ghidra_state: present
+ghidra_create_symlink: true
+ghidra_create_desktop_file: true
+ghidra_java_home_override: ""
+ghidra_max_memory: ""
+
+# Extensions installed by the configure step.
+# Each entry supports two forms:
+#   URL-based:  { name: "GhidraBSim", url: "https://…/ext.zip", checksum: "sha256:…" }
+#   Local path: { name: "MyLocalExt", src: "/path/to/ext.zip" }
+# 'name' must match the directory created inside Extensions/Ghidra/ after extraction.
+ghidra_extensions: []

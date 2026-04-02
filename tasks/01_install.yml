@@ -1,0 +1,13 @@
+---
+- name: Install Ghidra
+  when: ghidra_state == 'present'
+  block:
+    - name: Include OS-specific Ghidra installation
+      ansible.builtin.include_tasks: "{{ task_file }}"
+      with_first_found:
+        - "{{ role_path }}/tasks/noauto_install_ghidra_{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ role_path }}/tasks/noauto_install_ghidra_{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ role_path }}/tasks/noauto_install_ghidra_{{ ansible_distribution }}.yml"
+        - "{{ role_path }}/tasks/noauto_install_ghidra_{{ ansible_os_family }}.yml"
+      loop_control:
+        loop_var: task_file

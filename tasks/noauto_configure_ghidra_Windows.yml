@@ -1,0 +1,49 @@
+---
+- name: Configure Ghidra on Windows
+  block:
+    - name: Set Ghidra versioned dir fact
+      ansible.builtin.set_fact:
+        ghidra_versioned_dir: "ghidra_{{ ghidra_version }}_PUBLIC"
+
+    - name: Configure JAVA_HOME override in launch.properties
+      community.windows.win_lineinfile:
+        path: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}\\support\\launch.properties"
+        regexp: "^#?JAVA_HOME_OVERRIDE="
+        line: "JAVA_HOME_OVERRIDE={{ ghidra_java_home_override }}"
+      when: ghidra_java_home_override | length > 0
+
+    - name: Configure max memory in launch.properties
+      community.windows.win_lineinfile:
+        path: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}\\support\\launch.properties"
+        regexp: "^#?MAXMEM="
+        line: "MAXMEM={{ ghidra_max_memory }}"
+      when: ghidra_max_memory | length > 0
+
+    - name: Download Ghidra extensions from URL
+      ansible.windows.win_get_url:
+        url: "{{ extension.url }}"
+        dest: "C:\\Windows\\Temp\\ghidra_ext_{{ extension.name }}.zip"
+        checksum: "{{ (extension.checksum | regex_replace('^sha256:', '')) if extension.checksum is defined else omit }}"
+        checksum_algorithm: sha256
+      loop: "{{ ghidra_extensions | selectattr('url', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      when: ghidra_extensions | length > 0
+
+    - name: Install Ghidra extensions from URL
+      community.windows.win_unzip:
+        src: "C:\\Windows\\Temp\\ghidra_ext_{{ extension.name }}.zip"
+        dest: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}\\Extensions\\Ghidra\\"
+      loop: "{{ ghidra_extensions | selectattr('url', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      when: ghidra_extensions | length > 0
+
+    - name: Install Ghidra extensions from local path
+      community.windows.win_unzip:
+        src: "{{ extension.src }}"
+        dest: "{{ ghidra_windows_install_dir }}\\{{ ghidra_versioned_dir }}\\Extensions\\Ghidra\\"
+      loop: "{{ ghidra_extensions | selectattr('src', 'defined') | list }}"
+      loop_control:
+        loop_var: extension
+      when: ghidra_extensions | length > 0

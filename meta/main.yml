@@ -1,0 +1,22 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: ghidra
+  namespace: s3mme
+  author: s3mme
+  description: Installs and configures Ghidra on Debian and Windows systems
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Windows
+      versions:
+        - all
+
+  galaxy_tags:
+    - ghidra
+    - security
+    - reversing
